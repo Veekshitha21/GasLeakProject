@@ -1,0 +1,43 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: #111827;
+    color: white;
+    text-align: center;
+}
+
+.container {
+    margin-top: 80px;
+}
+
+h1 {
+    margin-bottom: 40px;
+}
+
+.card {
+    background: #1f2937;
+    width: 300px;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
+
+#status {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+#gasValue {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.danger {
+    color: red;
+}
+
+.safe {
+    color: lightgreen;
+}
