@@ -3,24 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gas Leak Detector</title>
+    <title>GasLeakSHGE - Live Gas Monitoring & Safety Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div class="container">
-        <h1>Gas Leakage Monitoring System</h1>
-
-        <div class="card">
-            <h2>Status</h2>
-            <p id="status">Checking...</p>
-        </div>
-
-        <div class="card">
-            <h2>Gas Value</h2>
-            <p id="gasValue">0</p>
-        </div>
+    <!-- Dynamic 3D Fog/Gas Particle System -->
+    <div id="fogContainer" class="fog-container" aria-hidden="true">
+        <canvas id="fogCanvas"></canvas>
     </div>
+
+    <!-- Smoke/fog overlay (visual only) -->
+    <div id="smoke" class="smoke-layer" aria-hidden="true">
+        <div class="fog fog1"></div>
+        <div class="fog fog2"></div>
+        <div class="fog fog3"></div>
+        <div class="foam"></div>
+        <div class="gas-particles"></div>
+    </div>
+
+    <header class="site-header">
+        <div class="header-bg"></div>
+        <div class="brand">
+            <div class="logo-3d" aria-hidden="true">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Detector icon with 3D perspective -->
+                    <defs>
+                        <radialGradient id="logoGrad" cx="40%" cy="40%">
+                            <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0ea5a2;stop-opacity:1" />
+                        </radialGradient>
+                    </defs>
+                    <rect x="20" y="15" width="60" height="70" rx="8" fill="url(#logoGrad)" opacity="0.9"/>
+                    <circle cx="50" cy="35" r="12" fill="#fff" opacity="0.8"/>
+                    <circle cx="50" cy="35" r="8" fill="#00d4ff" opacity="0.6"/>
+                    <path d="M 35 55 L 40 65 L 50 70 L 60 65 L 65 55" stroke="#fff" stroke-width="2" fill="none" opacity="0.7"/>
+                    <circle cx="50" cy="80" r="4" fill="#ff6b6b" opacity="0.9"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>GasSafe Monitor</h1>
+                <p class="subtitle">Real-Time Gas Detection & Safety Alert System</p>
+            </div>
+        </div>
+        <nav class="top-nav">
+            <span class="chip pulse">
+                <span class="pulse-dot"></span> Live
+            </span>
+            <span class="chip" id="statusChip">Initializing</span>
+            <span class="chip info-chip">v1.0</span>
+        </nav>
+    </header>
+
+    <main class="main-wrap">
+        <section class="hero">
+            <div class="hero-inner">
+                <div class="panel left">
+                    <div class="status-section">
+                        <h2>System Status</h2>
+                        <p id="status" class="status-pill status-safe">SAFE</p>
+                        <p class="status-label" id="statusLabel">All Systems Operational</p>
+                    </div>
+                    
+                    <div class="gas-section">
+                        <h3>Gas Level Reading</h3>
+                        <div class="gas-display">
+                            <p id="gasValue" class="gas-read">0</p>
+                            <span class="gas-unit">ppm</span>
+                        </div>
+                        <p class="gas-description" id="gasDesc">Normal concentration</p>
+                    </div>
+                </div>
+
+                <div class="panel right">
+                    <div class="gauge-wrap">
+                        <!-- SVG gauge -->
+                        <svg id="gauge" viewBox="0 0 220 140" preserveAspectRatio="xMidYMid meet">
+                            <defs>
+                                <linearGradient id="gaugeGrad" x1="0" x2="1">
+                                    <stop offset="0%" stop-color="#10b981" />
+                                    <stop offset="50%" stop-color="#f59e0b" />
+                                    <stop offset="100%" stop-color="#ef4444" />
+                                </linearGradient>
+                                <filter id="glowEffect">
+                                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <!-- Background arc -->
+                            <g transform="translate(110,110)">
+                                <circle r="80" fill="transparent" stroke="#e5e7eb" stroke-width="18" opacity="0.3"/>
+                                <!-- Animated gradient arc -->
+                                <circle id="gaugeArc" r="80" fill="transparent" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="502.65" stroke-dashoffset="502.65" transform="rotate(-180)" filter="url(#glowEffect)" style="transition: stroke-dashoffset 0.6s ease, filter 0.6s ease;"/>
+                                <!-- Needle with shadow -->
+                                <line id="needleShadow" x1="0" y1="0" x2="0" y2="-60" stroke="rgba(0,0,0,0.1)" stroke-width="5" stroke-linecap="round" transform="rotate(-180)" />
+                                <line id="needle" x1="0" y1="0" x2="0" y2="-60" stroke="#fff" stroke-width="3" stroke-linecap="round" transform="rotate(-180)" style="transition: transform 0.6s ease; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"/>
+                                <circle r="8" fill="#fff" filter="url(#glowEffect)"/>
+                                <!-- Tip that follows the arc -->
+                                <circle id="gaugeTip" cx="0" cy="-80" r="8" fill="#10b981" filter="url(#glowEffect)" transform="rotate(-180)" />
+                                <!-- Tick marks -->
+                                <g id="ticks" opacity="0.4">
+                                    <line x1="0" y1="-75" x2="0" y2="-85" stroke="currentColor" stroke-width="1.5"/>
+                                    <line x1="60" y1="-40" x2="68" y2="-45" stroke="currentColor" stroke-width="1.5"/>
+                                    <line x1="75" y1="0" x2="85" y2="0" stroke="currentColor" stroke-width="1.5"/>
+                                </g>
+                            </g>
+                            <text x="50%" y="125" text-anchor="middle" id="gaugeLabel" class="gauge-label">0%</text>
+                        </svg>
+                        <div class="gauge-footer">
+                            <span class="gauge-title">Live Gas Level</span>
+                            <span class="gauge-range" id="gaugeRange">Safe Range: 0-50 ppm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Additional Info Card -->
+        <section class="info-cards">
+            <div class="info-card">
+                <h4>Sensor Status</h4>
+                <p id="sensorStatus" class="sensor-status-text">Connected</p>
+            </div>
+            <div class="info-card">
+                <h4>Last Alert</h4>
+                <p id="lastAlert" class="last-alert-text">None</p>
+            </div>
+            <div class="info-card">
+                <h4>Update Rate</h4>
+                <p id="updateRate" class="update-rate-text">Real-time</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-left">
+                <p class="footer-brand">© <span id="year"></span> <strong>GasSafe Monitor</strong></p>
+                <p class="footer-tagline">Safety Through Real-Time Monitoring</p>
+            </div>
+            <div class="footer-center">
+                <span class="footer-item">Status: <strong id="footerStatus">CONNECTING</strong></span>
+                <span class="footer-item">Last Update: <span id="lastUpdated" class="update-time">--:--:--</span></span>
+            </div>
+            <div class="footer-right">
+                <p class="footer-credit">Powered by Firebase • Sensor Feed Active</p>
+                <p class="footer-version">v1.0 | Live Safety Dashboard</p>
+            </div>
+        </div>
+        <div class="footer-accent"></div>
+    </footer>
 
     <script type="module" src="script.js"></script>
 
